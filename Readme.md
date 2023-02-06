@@ -1,3 +1,9 @@
+# DL-DIY potential project ideas
+
+- read the paper and the blog
+- test different variants, compare to results in HW2
+- attention flow...
+
 # Explainability for Vision Transformers (in PyTorch)
 
 This repository implements methods for explainability in Vision Transformers.
