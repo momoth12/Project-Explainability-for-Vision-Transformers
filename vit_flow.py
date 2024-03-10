@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 
 import maxflow
+from tqdm import tqdm
 
 def compute_a_matrices(attentions, discard_ratio, head_fusion):
     '''Generates the A matrices as in the paper from the attention layers
@@ -46,42 +47,43 @@ def compute_a_matrices(attentions, discard_ratio, head_fusion):
 def compute_flow(a_matrices, input_node, output_flow, discard_ratio):
     '''Compute flow of a single input source
     '''
+
     n_tokens = a_matrices[0].size(-1)
     n_layers = len(a_matrices)
-    
     n_nodes = n_layers * n_tokens
-
     n_vertices = int((1 - discard_ratio) * n_tokens**2 + 1)
 
     g = maxflow.Graph[float](n_nodes, n_vertices) 
     nodes = g.add_nodes(n_nodes) 
 
-    ## Setting first nodes who will be sink
-
+    ## Setting sink nodes (input token nodes)
     for i in range(n_tokens):
         g.add_tedge(nodes[i], 0., output_flow)
         
-    ## Setting final nodes who will be source
+    ## Setting source nodes (final attention token nodes)
     source_weights = a_matrices[-1][0, :, input_node]
     for idx, node_number in enumerate(range(n_nodes - n_tokens, n_nodes)):
         g.add_tedge(nodes[node_number], source_weights[idx], 0)
 
-    ## Setting internal nodes
-
+    ## Setting internal edges
     for n_layer, a_matrix in enumerate(a_matrices):
         if n_layer == len(a_matrices) - 1: break
         
-        start_node = n_layer * n_tokens
-        start_node_next = (n_layer + 1) * n_tokens
+        start_node = n_layer * n_tokens # first node of current layer
+        start_node_next = (n_layer + 1) * n_tokens # first node of next layer
         
         for idx_x, node_number in enumerate(range(start_node, start_node + n_tokens)):
-            weights = a_matrix[0,idx_x,:]
+            weights = a_matrix[0, idx_x, :] # weight from current node to following layer 
             
             for idx_y in range(n_tokens):
-                if idx_y != 0: continue
+                # if idx_y != 0: 
+                #     continue
+                
                 weight = weights[idx_y]
                 
-                if weight == 0: continue
+                # No need to create link if weight is zero
+                if weight == 0: 
+                    continue
                 
                 node_number_next = start_node_next + idx_y
                 g.add_edge(nodes[node_number], nodes[node_number_next], 0., weight) # next layer points to layer before
@@ -98,7 +100,7 @@ def compute_all_flows(a_matrices, output_flow, discard_ratio):
     
     mask = torch.Tensor(np.zeros(n_tokens))
     
-    for n_token in range(n_tokens):
+    for n_token in tqdm(range(n_tokens)):
         mask[n_token] = compute_flow(a_matrices, n_token, output_flow, discard_ratio)
         
     mask = mask[1:]
