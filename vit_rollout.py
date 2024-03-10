@@ -28,7 +28,8 @@ def rollout(attentions, discard_ratio, head_fusion):
 
             I = torch.eye(attention_heads_fused.size(-1))
             a = (attention_heads_fused + 1.0*I)/2
-            a = a / a.sum(dim=-1)
+            # a = a / a.sum(dim=-1)
+            a = a / a.sum(dim=-1, keepdim=True)
 
             result = torch.matmul(a, result)
     
