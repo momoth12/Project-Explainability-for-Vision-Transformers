@@ -43,32 +43,82 @@ def compute_a_matrices(attentions, discard_ratio, head_fusion):
     return a_matrices
     
     
-def make_graph(a_matrices):
-    '''Must make graph such the the source is the class token at final layer (or given layer)
-    and the sink are the input embeddings
-    Uses PyMaxflow (or not)
-    The output must be the weights assigned to the initial tokens...
+def compute_flow(a_matrices, input_node, output_flow, discard_ratio):
+    '''Compute flow of a single input source
     '''
-    ...
+    n_tokens = a_matrices[0].size(-1)
+    n_layers = len(a_matrices)
+    
+    n_nodes = n_layers * n_tokens
 
-def flow(attentions, discard_ratio, head_fusion):
-    '''Generates attention flow mask in similar fashion as rollout
+    n_vertices = int((1 - discard_ratio) * n_tokens**2 + 1)
+
+    g = maxflow.Graph[float](n_nodes, n_vertices) 
+    nodes = g.add_nodes(n_nodes) 
+
+    ## Setting first nodes who will be sink
+
+    for i in range(n_tokens):
+        g.add_tedge(nodes[i], 0., output_flow)
+        
+    ## Setting final nodes who will be source
+    source_weights = a_matrices[-1][0, :, input_node]
+    for idx, node_number in enumerate(range(n_nodes - n_tokens, n_nodes)):
+        g.add_tedge(nodes[node_number], source_weights[idx], 0)
+
+    ## Setting internal nodes
+
+    for n_layer, a_matrix in enumerate(a_matrices):
+        if n_layer == len(a_matrices) - 1: break
+        
+        start_node = n_layer * n_tokens
+        start_node_next = (n_layer + 1) * n_tokens
+        
+        for idx_x, node_number in enumerate(range(start_node, start_node + n_tokens)):
+            weights = a_matrix[0,idx_x,:]
+            
+            for idx_y in range(n_tokens):
+                if idx_y != 0: continue
+                weight = weights[idx_y]
+                
+                if weight == 0: continue
+                
+                node_number_next = start_node_next + idx_y
+                g.add_edge(nodes[node_number], nodes[node_number_next], 0., weight) # next layer points to layer before
+                
+    max_flow = g.maxflow()
+    
+    return max_flow
+
+
+def compute_all_flows(a_matrices, output_flow, discard_ratio):
+    '''Compute flow for all sources
     '''
+    n_tokens = a_matrices[0].size(-1)
     
-    # Get the a_matrices
-    a_matrices = compute_a_matrices(attentions, discard_ratio, head_fusion)
+    mask = torch.Tensor(np.zeros(n_tokens))
     
-    # Generates the graph structure
-    graph = make_graph(a_matrices)
+    for n_token in range(n_tokens):
+        mask[n_token] = compute_flow(a_matrices, n_token, output_flow, discard_ratio)
+        
+    mask = mask[1:]
     
-    # must generate mask
-    mask = ... # TODO
-
-    # Adjust for output
     width = int(mask.size(-1)**0.5)
     mask = mask.reshape(width, width).numpy()
     mask = mask / np.max(mask)
     
+    return mask
+
+def flow(attentions, discard_ratio, head_fusion, output_flow=2.):
+    '''Generates attention flow mask in similar fashion as rollout
+    '''
+    
+    # Getting a_matrices
+    a_matrices = compute_a_matrices(attentions, discard_ratio, head_fusion)
+    
+    # must generate mask
+    mask = compute_all_flows(a_matrices, output_flow, discard_ratio)
+
     return mask
 
 class VITAttentionFlow:
