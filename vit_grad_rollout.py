@@ -35,6 +35,32 @@ def grad_rollout(attentions, gradients, discard_ratio):
     mask = mask / np.max(mask)
     return mask    
 
+def attention_grad_rollout_mask(attentions, gradients, discard_ratio):
+    result = torch.eye(attentions[0].size(-1))
+    with torch.no_grad():
+        for attention, grad in zip(attentions, gradients):                
+            weights = grad
+            attention_heads_fused = (attention*weights).mean(axis=1)
+            attention_heads_fused[attention_heads_fused < 0] = 0
+
+            # Drop the lowest attentions, but
+            # don't drop the class token
+            flat = attention_heads_fused.view(attention_heads_fused.size(0), -1)
+            _, indices = flat.topk(int(flat.size(-1)*discard_ratio), -1, False)
+            #indices = indices[indices != 0]
+            flat[0, indices] = 0
+
+            I = torch.eye(attention_heads_fused.size(-1))
+            a = (attention_heads_fused + 1.0*I)/2
+            a = a / a.sum(dim=-1)
+            result = torch.matmul(a, result)
+    
+    # Look at the total attention between the class token,
+    # and the image patches
+    mask = result[0, 0 , 1 :]
+
+    return mask    
+
 class VITAttentionGradRollout:
     def __init__(self, model, attention_layer_name='attn_drop',
         discard_ratio=0.9):
@@ -64,3 +90,13 @@ class VITAttentionGradRollout:
 
         return grad_rollout(self.attentions, self.attention_gradients,
             self.discard_ratio)
+        
+    def get_attention_mask(self, input_tensor, category_index):
+        self.model.zero_grad()
+        output = self.model(input_tensor)
+        category_mask = torch.zeros(output.size())
+        category_mask[:, category_index] = 1
+        loss = (output*category_mask).sum()
+        loss.backward()
+        
+        return attention_grad_rollout_mask(self.attentions, self.attention_gradients, self.discard_ratio)
