@@ -12,6 +12,7 @@ Our presentation can be found in presentation.pdf
 - vit_flow.py: Implements the flow algorithm from the paper that was not yet in the repository. The other variations are attempts to reproduce other paper ideas on Attention Flow algorithms.
 - blank_out.ipynb: Notebook for generating all the blank_out data.
 - implementing_flow.ipynb: Notebook used for developping the paper algorithm.
+- attention_flow_attack_metric.ipnb: Notebook that created the attack data and generated images for the presentation.
 
 ## Folders
 
