@@ -93,7 +93,11 @@ def compute_flow(a_matrices, input_node, output_flow, discard_ratio):
     return max_flow
 
 
+<<<<<<< HEAD
 def compute_all_flows(a_matrices, output_flow, discard_ratio):
+=======
+def compute_all_flows(a_matrices, discard_ratio, output_flow=2.):
+>>>>>>> Nicolas
     '''Compute flow for all sources
     '''
     n_tokens = a_matrices[0].size(-1)
@@ -101,7 +105,11 @@ def compute_all_flows(a_matrices, output_flow, discard_ratio):
     mask = torch.Tensor(np.zeros(n_tokens))
     
     for n_token in tqdm(range(n_tokens)):
+<<<<<<< HEAD
         mask[n_token] = compute_flow(a_matrices, n_token, output_flow, discard_ratio)
+=======
+        mask[n_token] = compute_flow(a_matrices, n_token, discard_ratio, output_flow)
+>>>>>>> Nicolas
         
     mask = mask[1:]
     
@@ -111,6 +119,27 @@ def compute_all_flows(a_matrices, output_flow, discard_ratio):
     
     return mask
 
+<<<<<<< HEAD
+=======
+def attention_flow_mask(attentions, discard_ratio, head_fusion, output_flow=2.):
+    '''Compute flow for all sources
+    '''
+    # Getting a_matrices
+    a_matrices = compute_a_matrices(attentions, discard_ratio, head_fusion)
+    
+    # Getting mask
+    n_tokens = a_matrices[0].size(-1)
+    
+    mask = torch.Tensor(np.zeros(n_tokens))
+    
+    for n_token in tqdm(range(n_tokens)):
+        mask[n_token] = compute_flow(a_matrices, n_token, discard_ratio, output_flow)
+        
+    mask = mask[1:]
+    
+    return mask
+
+>>>>>>> Nicolas
 def flow(attentions, discard_ratio, head_fusion, output_flow=2.):
     '''Generates attention flow mask in similar fashion as rollout
     '''
@@ -119,7 +148,11 @@ def flow(attentions, discard_ratio, head_fusion, output_flow=2.):
     a_matrices = compute_a_matrices(attentions, discard_ratio, head_fusion)
     
     # must generate mask
+<<<<<<< HEAD
     mask = compute_all_flows(a_matrices, output_flow, discard_ratio)
+=======
+    mask = compute_all_flows(a_matrices, discard_ratio, output_flow)
+>>>>>>> Nicolas
 
     return mask
 
@@ -143,4 +176,17 @@ class VITAttentionFlow:
         with torch.no_grad():
             output = self.model(input_tensor)
 
+<<<<<<< HEAD
         return flow(self.attentions, self.discard_ratio, self.head_fusion)
+=======
+        return flow(self.attentions, self.discard_ratio, self.head_fusion)
+    
+    def get_attention_mask(self, input_tensor):
+        self.attentions = []
+        with torch.no_grad():
+            output = self.model(input_tensor)
+            
+        a_matrices = compute_a_matrices(self.attentions, self.discard_ratio, self.head_fusion)
+            
+        return attention_flow_mask(self.attentions, self.discard_ratio, self.head_fusion, output_flow=2.)
+>>>>>>> Nicolas
