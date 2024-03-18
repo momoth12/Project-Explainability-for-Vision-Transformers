@@ -1,3 +1,26 @@
+# MAP583 - Group 21: Updates from the original Repository
+
+This repository was forked from the original Dataflowr one and we made significant changes. Here are the main notebooks that were used by our group in the final presentation as well as new implemented functions.
+
+Our presentation can be found in presentation.pdf
+
+## Files
+
+- flow_example.ipynb: allowed us to generate images for the different methods.
+- performance_eval.ipynb: allowed to generate the statistical analysis and plot of the data we collected.
+- performance_eval.ipynb: notebook that automatized the extractation of token importance
+- vit_flow.py: Implements the flow algorithm from the paper that was not yet in the repository. The other variations are attempts to reproduce other paper ideas on Attention Flow algorithms.
+- blank_out.ipynb: Notebook for generating all the blank_out data.
+- implementing_flow.ipynb: Notebook used for developping the paper algorithm.
+
+## Folders
+
+- images_done: Importance masks and blank_out for tokens generated through performance_eval.ipynb and blank_out.ipynb. Each line has the dimension of the number of tokens.
+- attack_data: Stored data generated from attack notebooks. Each line has the dimension of the number of tokens. 
+- images: Images we used for our study (from validation set of ImageNet competition)
+
+Below you will find the Readme from the Dataflowr repository.
+
 # DL-DIY potential project ideas
 
 - read the paper and the blog
